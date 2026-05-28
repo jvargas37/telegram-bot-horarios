@@ -11,10 +11,8 @@ HORA_FIN = 20
 
 async def controlar_mensajes(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    
     hora = datetime.now(pytz.timezone("Europe/Madrid")).hour
 
-    
     if hora < HORA_INICIO or hora >= HORA_FIN:
         try:
             await update.message.delete()
