@@ -1,57 +1,40 @@
-from telegram import ChatPermissions
-from telegram.ext import Application
+from telegram import Update, ChatPermissions
+from telegram.ext import Application, MessageHandler, filters, ContextTypes
 from datetime import datetime
 import pytz
 import os
-import asyncio
 
 TOKEN = os.getenv("TOKEN")
 
 HORA_INICIO = 8
 HORA_FIN = 20
 
-estado = None
-
 def cerrado():
     hora = datetime.now(pytz.timezone("Europe/Madrid")).hour
     return hora < HORA_INICIO or hora >= HORA_FIN
 
-async def controlar(app: Application):
-    global estado
+async def controlar(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    while True:
-        chat_id = None
+    chat = update.effective_chat
 
-        # intenta obtener chats activos desde updates (simple enfoque)
-        for update in app.bot.get_updates(limit=1):
-            chat_id = update.message.chat_id if update.message else None
+    try:
+        if cerrado():
+            await chat.set_permissions(
+                ChatPermissions(can_send_messages=False)
+            )
+        else:
+            await chat.set_permissions(
+                ChatPermissions(can_send_messages=True)
+            )
 
-        if chat_id:
-            try:
-                if cerrado() and estado != "cerrado":
-                    await app.bot.set_chat_permissions(
-                        chat_id,
-                        ChatPermissions(can_send_messages=False)
-                    )
-                    estado = "cerrado"
-
-                elif not cerrado() and estado != "abierto":
-                    await app.bot.set_chat_permissions(
-                        chat_id,
-                        ChatPermissions(can_send_messages=True)
-                    )
-                    estado = "abierto"
-
-            except Exception as e:
-                print(e)
-
-        await asyncio.sleep(60)
-
-async def post_init(app: Application):
-    asyncio.create_task(controlar(app))
+    except Exception as e:
+        print("ERROR:", e)
 
 def main():
-    app = Application.builder().token(TOKEN).post_init(post_init).build()
+    app = Application.builder().token(TOKEN).build()
+
+    app.add_handler(MessageHandler(filters.ALL, controlar))
+
     print("Bot en marcha...")
     app.run_polling()
 
