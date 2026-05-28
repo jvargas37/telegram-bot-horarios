@@ -1,18 +1,20 @@
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
 from datetime import datetime
+import pytz
+import os
 
-TOKEN = "PEGA_AQUI_TU_TOKEN"
+TOKEN = os.getenv("TOKEN")
 
 HORA_INICIO = 8
 HORA_FIN = 20
 
 async def controlar_mensajes(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    from datetime import datetime
-import pytz
 
-hora = datetime.now(pytz.timezone("Europe/Madrid")).hour
+    
+    hora = datetime.now(pytz.timezone("Europe/Madrid")).hour
 
+    
     if hora < HORA_INICIO or hora >= HORA_FIN:
         try:
             await update.message.delete()
@@ -20,14 +22,16 @@ hora = datetime.now(pytz.timezone("Europe/Madrid")).hour
             pass
 
         await update.message.reply_text(
-            "⛔ Este tema está cerrado fuera de horario.\n"
+            "⛔ Este grupo está cerrado fuera de horario.\n"
             f"🕒 Disponible de {HORA_INICIO}:00 a {HORA_FIN}:00"
         )
 
 def main():
     app = Application.builder().token(TOKEN).build()
 
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, controlar_mensajes))
+    app.add_handler(
+        MessageHandler(filters.TEXT & ~filters.COMMAND, controlar_mensajes)
+    )
 
     print("Bot en marcha...")
     app.run_polling()
