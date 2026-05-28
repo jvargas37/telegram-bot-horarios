@@ -2,8 +2,9 @@ from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
 from datetime import datetime
 import pytz
+import os
 
-TOKEN = "PEGA_AQUI_TU_TOKEN"
+TOKEN = os.getenv("TOKEN")
 
 HORA_INICIO = 8
 HORA_FIN = 20
