@@ -8,7 +8,10 @@ HORA_INICIO = 8
 HORA_FIN = 20
 
 async def controlar_mensajes(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    hora = datetime.now().hour
+    from datetime import datetime
+import pytz
+
+hora = datetime.now(pytz.timezone("Europe/Madrid")).hour
 
     if hora < HORA_INICIO or hora >= HORA_FIN:
         try:
