@@ -9,17 +9,31 @@ TOKEN = os.getenv("TOKEN")
 HORA_INICIO = 8
 HORA_FIN = 20
 
+estado_actual = None  # None / "abierto" / "cerrado"
+
 def es_fuera_de_horario():
     hora = datetime.now(pytz.timezone("Europe/Madrid")).hour
     return hora < HORA_INICIO or hora >= HORA_FIN
 
 async def controlar_grupo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
+    global estado_actual
     chat = update.effective_chat
 
+    fuera = es_fuera_de_horario()
+
+    # Estado deseado
+    nuevo_estado = "cerrado" if fuera else "abierto"
+
+    # 🔥 SOLO ACTUAR SI CAMBIA EL ESTADO
+    if nuevo_estado == estado_actual:
+        return
+
+    estado_actual = nuevo_estado
+
     try:
-        if es_fuera_de_horario():
-            # 🔴 BLOQUEAR ESCRITURA
+        if fuera:
+            # 🔴 CERRAR GRUPO
             await chat.set_permissions(
                 ChatPermissions(
                     can_send_messages=False,
@@ -27,22 +41,17 @@ async def controlar_grupo(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     can_send_polls=False,
                     can_send_other_messages=False,
                     can_add_web_page_previews=False,
-                    can_send_audios=False,
-                    can_send_documents=False,
-                    can_send_photos=False,
-                    can_send_videos=False,
-                    can_send_video_notes=False,
-                    can_send_voice_notes=False,
                 )
             )
 
             await update.message.reply_text(
-                "⛔ Grupo cerrado fuera de horario.\n"
-                f"🕒 Disponible de {HORA_INICIO}:00 a {HORA_FIN}:00"
+                "⛔ GRUPO CERRADO\n"
+                f"🕒 Horario activo: {HORA_INICIO}:00 - {HORA_FIN}:00\n"
+                "📵 Ahora no se pueden enviar mensajes."
             )
 
         else:
-            # 🟢 ABRIR CHAT
+            # 🟢 ABRIR GRUPO
             await chat.set_permissions(
                 ChatPermissions(
                     can_send_messages=True,
@@ -50,13 +59,12 @@ async def controlar_grupo(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     can_send_polls=True,
                     can_send_other_messages=True,
                     can_add_web_page_previews=True,
-                    can_send_audios=True,
-                    can_send_documents=True,
-                    can_send_photos=True,
-                    can_send_videos=True,
-                    can_send_video_notes=True,
-                    can_send_voice_notes=True,
                 )
+            )
+
+            await update.message.reply_text(
+                "🟢 GRUPO ABIERTO\n"
+                f"🕒 Horario activo: {HORA_INICIO}:00 - {HORA_FIN}:00"
             )
 
     except Exception as e:
@@ -65,7 +73,6 @@ async def controlar_grupo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     app = Application.builder().token(TOKEN).build()
 
-    # Se ejecuta con cualquier mensaje
     app.add_handler(
         MessageHandler(filters.ALL, controlar_grupo)
     )
