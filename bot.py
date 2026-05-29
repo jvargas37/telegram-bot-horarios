@@ -11,9 +11,11 @@ async def detectar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("CHAT ID:", chat.id)
     print("CHAT TITLE:", chat.title)
 
-    await update.message.reply_text(
-        f"ID de este grupo: {chat.id}"
-    )
+    # solo responde si puede
+    try:
+        await update.message.reply_text(f"ID: {chat.id}")
+    except:
+        pass
 
 def main():
     app = Application.builder().token(TOKEN).build()
