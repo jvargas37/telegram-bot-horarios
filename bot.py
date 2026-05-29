@@ -1,38 +1,58 @@
 from telegram import Update, ChatPermissions
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 import os
 
 TOKEN = os.getenv("TOKEN")
 
-HORA_INICIO = 8
-HORA_FIN = 21
-
 GRUPOS_OBJETIVO = [
     -1003725549983
 ]
 
+tz = pytz.timezone("Europe/Madrid")
+
+# 🔥 HORARIOS DE PRUEBA
+hora_inicio = (datetime.now(tz) + timedelta(minutes=5)).hour
+minuto_inicio = (datetime.now(tz) + timedelta(minutes=5)).minute
+
+hora_fin = (datetime.now(tz) + timedelta(minutes=6)).hour
+minuto_fin = (datetime.now(tz) + timedelta(minutes=6)).minute
+
+estado = None
+
 def cerrado():
-    hora = datetime.now(pytz.timezone("Europe/Madrid")).hour
-    return hora < HORA_INICIO or hora >= HORA_FIN
+    ahora = datetime.now(tz)
+    actual = (ahora.hour, ahora.minute)
+
+    inicio = (hora_inicio, minuto_inicio)
+    fin = (hora_fin, minuto_fin)
+
+    return not (inicio <= actual < fin)
 
 async def controlar(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
+    global estado
     chat = update.effective_chat
 
     if chat.id not in GRUPOS_OBJETIVO:
         return
 
+    nuevo = "cerrado" if cerrado() else "abierto"
+
+    if nuevo == estado:
+        return
+
+    estado = nuevo
+
     try:
-        if cerrado():
+        if nuevo == "cerrado":
             await chat.set_permissions(
                 ChatPermissions(can_send_messages=False)
             )
 
             await update.message.reply_text(
-                "🔴 El grup està tancat\n"
-                "🕒 Horari: 08:00 a 21:00"
+                "🔴 El grup està tancat (TEST)"
             )
 
         else:
@@ -41,8 +61,7 @@ async def controlar(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
             await update.message.reply_text(
-                "🟢 El grup està obert\n"
-                "🕒 Horari: 08:00 a 21:00"
+                "🟢 El grup està obert (TEST)"
             )
 
     except Exception as e:
