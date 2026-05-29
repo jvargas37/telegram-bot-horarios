@@ -11,39 +11,27 @@ GRUPO_ID = -1003725549983
 
 tz = pytz.timezone("Europe/Madrid")
 
-# 🔥 TIEMPOS DE PRUEBA
-ahora = datetime.now(tz)
-hora_abrir = ahora + timedelta(minutes=6)
-hora_cerrar = ahora + timedelta(minutes=11)
-
 estado = None
 
-def cerrado():
+# 🔥 Ventana de prueba FIJA desde el inicio del bot
+inicio = datetime.now(tz) + timedelta(minutes=5)
+fin = datetime.now(tz) + timedelta(minutes=6)
+
+def esta_cerrado():
     ahora = datetime.now(tz)
-    return not (hora_abrir <= ahora < hora_cerrar)
+    return not (inicio <= ahora < fin)
 
 async def loop(app):
     global estado
 
     while True:
         try:
-            nuevo_estado = "cerrado" if cerrado() else "abierto"
+            nuevo_estado = "cerrado" if esta_cerrado() else "abierto"
 
             if nuevo_estado != estado:
                 estado = nuevo_estado
 
-                if nuevo_estado == "cerrado":
-                    await app.bot.set_chat_permissions(
-                        GRUPO_ID,
-                        ChatPermissions(can_send_messages=False)
-                    )
-
-                    await app.bot.send_message(
-                        GRUPO_ID,
-                        "🔴 TEST: grup tancat"
-                    )
-
-                else:
+                if nuevo_estado == "abierto":
                     await app.bot.set_chat_permissions(
                         GRUPO_ID,
                         ChatPermissions(can_send_messages=True)
@@ -52,6 +40,17 @@ async def loop(app):
                     await app.bot.send_message(
                         GRUPO_ID,
                         "🟢 TEST: grup obert"
+                    )
+
+                else:
+                    await app.bot.set_chat_permissions(
+                        GRUPO_ID,
+                        ChatPermissions(can_send_messages=False)
+                    )
+
+                    await app.bot.send_message(
+                        GRUPO_ID,
+                        "🔴 TEST: grup tancat"
                     )
 
         except Exception as e:
@@ -65,7 +64,7 @@ async def post_init(app):
 def main():
     app = Application.builder().token(TOKEN).post_init(post_init).build()
 
-    print("Bot en marcha (TEST MODE)")
+    print("Bot en marcha (TEST 5-6 min)")
     app.run_polling()
 
 if __name__ == "__main__":
