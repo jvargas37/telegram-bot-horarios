@@ -9,33 +9,17 @@ TOKEN = os.getenv("TOKEN")
 HORA_INICIO = 8
 HORA_FIN = 21
 
-estado_actual = None
-
 def cerrado():
     hora = datetime.now(pytz.timezone("Europe/Madrid")).hour
     return hora < HORA_INICIO or hora >= HORA_FIN
 
 async def controlar(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    global estado_actual
     chat = update.effective_chat
-
-    # 🔍 DEBUG: ver en logs dónde está actuando
-    print("CHAT ID:", chat.id)
-    print("CHAT TITLE:", chat.title)
-
-    nuevo_estado = "cerrado" if cerrado() else "abierto"
-
-    if nuevo_estado == estado_actual:
-        return
-
-    estado_actual = nuevo_estado
 
     try:
         if cerrado():
-            await chat.set_permissions(
-                ChatPermissions(can_send_messages=False)
-            )
+            await chat.set_permissions(ChatPermissions(can_send_messages=False))
 
             await update.message.reply_text(
                 "🔴 El grup està tancat\n"
@@ -43,17 +27,15 @@ async def controlar(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
         else:
-            await chat.set_permissions(
-                ChatPermissions(can_send_messages=True)
-            )
+            await chat.set_permissions(ChatPermissions(can_send_messages=True))
 
             await update.message.reply_text(
                 "🟢 El grup està obert\n"
                 "🕒 Horari: 08:00 a 21:00"
             )
 
-    except Exception as e:
-        print("ERROR:", e)
+    except:
+        pass
 
 def main():
     app = Application.builder().token(TOKEN).build()
