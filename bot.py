@@ -1,7 +1,7 @@
 from telegram import ChatPermissions
 from telegram.ext import Application
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime
 import pytz
 import os
 
@@ -9,29 +9,28 @@ TOKEN = os.getenv("TOKEN")
 
 GRUPO_ID = -1003725549983
 
+HORA_INICIO = 8
+HORA_FIN = 21
+
 tz = pytz.timezone("Europe/Madrid")
 
 estado = None
 
-# 🔥 Ventana de prueba FIJA desde el inicio del bot
-inicio = datetime.now(tz) + timedelta(minutes=5)
-fin = datetime.now(tz) + timedelta(minutes=6)
-
-def esta_cerrado():
-    ahora = datetime.now(tz)
-    return not (inicio <= ahora < fin)
+def cerrado():
+    hora = datetime.now(tz).hour
+    return hora < HORA_INICIO or hora >= HORA_FIN
 
 async def loop(app):
     global estado
 
     while True:
         try:
-            nuevo_estado = "cerrado" if esta_cerrado() else "abierto"
+            nuevo = "cerrado" if cerrado() else "abierto"
 
-            if nuevo_estado != estado:
-                estado = nuevo_estado
+            if nuevo != estado:
+                estado = nuevo
 
-                if nuevo_estado == "abierto":
+                if nuevo == "abierto":
                     await app.bot.set_chat_permissions(
                         GRUPO_ID,
                         ChatPermissions(can_send_messages=True)
@@ -39,7 +38,7 @@ async def loop(app):
 
                     await app.bot.send_message(
                         GRUPO_ID,
-                        "🟢 TEST: grup obert"
+                        "🟢 El grup està obert\n🕒 Horari: 08:00 a 21:00"
                     )
 
                 else:
@@ -50,13 +49,13 @@ async def loop(app):
 
                     await app.bot.send_message(
                         GRUPO_ID,
-                        "🔴 TEST: grup tancat"
+                        "🔴 El grup està tancat\n🕒 Horari: 08:00 a 21:00"
                     )
 
         except Exception as e:
             print("ERROR:", e)
 
-        await asyncio.sleep(20)
+        await asyncio.sleep(60)
 
 async def post_init(app):
     asyncio.create_task(loop(app))
@@ -64,7 +63,7 @@ async def post_init(app):
 def main():
     app = Application.builder().token(TOKEN).post_init(post_init).build()
 
-    print("Bot en marcha (TEST 5-6 min)")
+    print("Bot en marcha (PRODUCCIÓN)")
     app.run_polling()
 
 if __name__ == "__main__":
