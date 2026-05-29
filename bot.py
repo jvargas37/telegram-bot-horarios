@@ -1,26 +1,57 @@
-from telegram import Update
+from telegram import Update, ChatPermissions
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
+from datetime import datetime
+import pytz
 import os
 
 TOKEN = os.getenv("TOKEN")
 
-async def detectar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+HORA_INICIO = 8
+HORA_FIN = 21
+
+GRUPOS_OBJETIVO = [
+    -1003725549983
+]
+
+def cerrado():
+    hora = datetime.now(pytz.timezone("Europe/Madrid")).hour
+    return hora < HORA_INICIO or hora >= HORA_FIN
+
+async def controlar(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     chat = update.effective_chat
 
-    print("CHAT ID:", chat.id)
-    print("CHAT TITLE:", chat.title)
+    if chat.id not in GRUPOS_OBJETIVO:
+        return
 
-    # solo responde si puede
     try:
-        await update.message.reply_text(f"ID: {chat.id}")
-    except:
-        pass
+        if cerrado():
+            await chat.set_permissions(
+                ChatPermissions(can_send_messages=False)
+            )
+
+            await update.message.reply_text(
+                "🔴 El grup està tancat\n"
+                "🕒 Horari: 08:00 a 21:00"
+            )
+
+        else:
+            await chat.set_permissions(
+                ChatPermissions(can_send_messages=True)
+            )
+
+            await update.message.reply_text(
+                "🟢 El grup està obert\n"
+                "🕒 Horari: 08:00 a 21:00"
+            )
+
+    except Exception as e:
+        print("ERROR:", e)
 
 def main():
     app = Application.builder().token(TOKEN).build()
 
-    app.add_handler(MessageHandler(filters.ALL, detectar))
+    app.add_handler(MessageHandler(filters.ALL, controlar))
 
     print("Bot en marcha...")
     app.run_polling()
