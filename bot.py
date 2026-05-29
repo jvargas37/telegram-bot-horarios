@@ -1,76 +1,67 @@
-from telegram import Update, ChatPermissions
-from telegram.ext import Application, MessageHandler, filters, ContextTypes
-from datetime import datetime, timedelta
+from telegram import ChatPermissions
+from telegram.ext import Application
+import asyncio
+from datetime import datetime
 import pytz
 import os
 
 TOKEN = os.getenv("TOKEN")
 
-GRUPOS_OBJETIVO = [
-    -1003725549983
-]
+GRUPO_ID = -1003725549983
+
+HORA_INICIO = 8
+HORA_FIN = 21
 
 tz = pytz.timezone("Europe/Madrid")
-
-# 🔥 HORARIOS DE PRUEBA
-hora_inicio = (datetime.now(tz) + timedelta(minutes=5)).hour
-minuto_inicio = (datetime.now(tz) + timedelta(minutes=5)).minute
-
-hora_fin = (datetime.now(tz) + timedelta(minutes=6)).hour
-minuto_fin = (datetime.now(tz) + timedelta(minutes=6)).minute
 
 estado = None
 
 def cerrado():
-    ahora = datetime.now(tz)
-    actual = (ahora.hour, ahora.minute)
+    hora = datetime.now(tz).hour
+    return hora < HORA_INICIO or hora >= HORA_FIN
 
-    inicio = (hora_inicio, minuto_inicio)
-    fin = (hora_fin, minuto_fin)
-
-    return not (inicio <= actual < fin)
-
-async def controlar(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
+async def loop_control(app):
     global estado
-    chat = update.effective_chat
 
-    if chat.id not in GRUPOS_OBJETIVO:
-        return
+    while True:
+        try:
+            nuevo = "cerrado" if cerrado() else "abierto"
 
-    nuevo = "cerrado" if cerrado() else "abierto"
+            if nuevo != estado:
+                estado = nuevo
 
-    if nuevo == estado:
-        return
+                if nuevo == "cerrado":
+                    await app.bot.set_chat_permissions(
+                        GRUPO_ID,
+                        ChatPermissions(can_send_messages=False)
+                    )
 
-    estado = nuevo
+                    await app.bot.send_message(
+                        GRUPO_ID,
+                        "🔴 El grup està tancat\n🕒 Horari: 08:00 a 21:00"
+                    )
 
-    try:
-        if nuevo == "cerrado":
-            await chat.set_permissions(
-                ChatPermissions(can_send_messages=False)
-            )
+                else:
+                    await app.bot.set_chat_permissions(
+                        GRUPO_ID,
+                        ChatPermissions(can_send_messages=True)
+                    )
 
-            await update.message.reply_text(
-                "🔴 El grup està tancat (TEST)"
-            )
+                    await app.bot.send_message(
+                        GRUPO_ID,
+                        "🟢 El grup està obert\n🕒 Horari: 08:00 a 21:00"
+                    )
 
-        else:
-            await chat.set_permissions(
-                ChatPermissions(can_send_messages=True)
-            )
+        except Exception as e:
+            print("ERROR:", e)
 
-            await update.message.reply_text(
-                "🟢 El grup està obert (TEST)"
-            )
+        await asyncio.sleep(30)
 
-    except Exception as e:
-        print("ERROR:", e)
+async def post_init(app):
+    asyncio.create_task(loop_control(app))
 
 def main():
-    app = Application.builder().token(TOKEN).build()
-
-    app.add_handler(MessageHandler(filters.ALL, controlar))
+    app = Application.builder().token(TOKEN).post_init(post_init).build()
 
     print("Bot en marcha...")
     app.run_polling()
