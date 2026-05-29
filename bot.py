@@ -20,7 +20,11 @@ async def controlar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global estado_actual
     chat = update.effective_chat
 
-    nuevo_estado = "tancat" if cerrado() else "obert"
+    # 🔍 DEBUG: ver en logs dónde está actuando
+    print("CHAT ID:", chat.id)
+    print("CHAT TITLE:", chat.title)
+
+    nuevo_estado = "cerrado" if cerrado() else "abierto"
 
     if nuevo_estado == estado_actual:
         return
