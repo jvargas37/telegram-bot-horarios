@@ -23,6 +23,27 @@ def cerrado():
     return hora < HORA_INICIO or hora >= HORA_FIN
 
 
+async def enviar_estado(app, nuevo):
+    if nuevo == "abierto":
+        await app.bot.set_chat_permissions(
+            GRUPO_ID,
+            ChatPermissions(can_send_messages=True)
+        )
+        await app.bot.send_message(
+            GRUPO_ID,
+            "🟢 El grup està obert\n🕒 Horari: 08:00 a 21:00"
+        )
+    else:
+        await app.bot.set_chat_permissions(
+            GRUPO_ID,
+            ChatPermissions(can_send_messages=False)
+        )
+        await app.bot.send_message(
+            GRUPO_ID,
+            "🔴 El grup està tancat\n🕒 Horari: 08:00 a 21:00"
+        )
+
+
 async def loop(app):
     global estado
 
@@ -32,20 +53,7 @@ async def loop(app):
 
             if nuevo != estado:
                 estado = nuevo
-
-                if nuevo == "abierto":
-                    await app.bot.set_chat_permissions(
-                        GRUPO_ID,
-                        ChatPermissions(can_send_messages=True)
-                    )
-                    await app.bot.send_message(GRUPO_ID, "🟢 Obert 08-21")
-
-                else:
-                    await app.bot.set_chat_permissions(
-                        GRUPO_ID,
-                        ChatPermissions(can_send_messages=False)
-                    )
-                    await app.bot.send_message(GRUPO_ID, "🔴 Tancat 08-21")
+                await enviar_estado(app, nuevo)
 
         except Exception as e:
             print(e)
@@ -64,18 +72,23 @@ def web_server():
     server.serve_forever()
 
 
-def main():
+async def main_async():
     app = Application.builder().token(TOKEN).build()
 
     threading.Thread(target=web_server, daemon=True).start()
 
-    loop_async = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop_async)
+    estado_inicial = "cerrado" if cerrado() else "abierto"
+    global estado
+    estado = estado_inicial
+    await enviar_estado(app, estado_inicial)
 
-    loop_async.create_task(loop(app))
+    asyncio.create_task(loop(app))
 
-    app.run_polling()
+    await app.initialize()
+    await app.start()
+
+    await asyncio.Event().wait()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main_async())
