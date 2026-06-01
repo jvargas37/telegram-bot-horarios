@@ -26,24 +26,35 @@ def cerrado():
 
 async def enviar_estado(app, nuevo):
     if nuevo == "abierto":
+        texto = "🟢 El grup està obert\n🕒 Horari: 08:00 a 21:00"
+
         await app.bot.set_chat_permissions(
             GRUPO_ID,
             ChatPermissions(can_send_messages=True)
         )
+
+        await app.bot.send_message(GRUPO_ID, text=texto)
+
         await app.bot.send_message(
             chat_id=GRUPO_ID,
             message_thread_id=TOPIC_ID,
-            text="🟢 El grup està obert\n🕒 Horari: 08:00 a 21:00"
+            text=texto
         )
+
     else:
+        texto = "🔴 El grup està tancat\n🕒 Horari: 08:00 a 21:00"
+
         await app.bot.set_chat_permissions(
             GRUPO_ID,
             ChatPermissions(can_send_messages=False)
         )
+
+        await app.bot.send_message(GRUPO_ID, text=texto)
+
         await app.bot.send_message(
             chat_id=GRUPO_ID,
             message_thread_id=TOPIC_ID,
-            text="🔴 El grup està tancat\n🕒 Horari: 08:00 a 21:00"
+            text=texto
         )
 
 
