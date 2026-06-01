@@ -16,9 +16,11 @@ tz = pytz.timezone("Europe/Madrid")
 
 estado = None
 
+
 def cerrado():
     hora = datetime.now(tz).hour
     return hora < HORA_INICIO or hora >= HORA_FIN
+
 
 async def loop(app):
     global estado
@@ -57,14 +59,16 @@ async def loop(app):
 
         await asyncio.sleep(60)
 
-async def post_init(app):
-    asyncio.create_task(loop(app))
 
 def main():
-    app = Application.builder().token(TOKEN).post_init(post_init).build()
+    app = Application.builder().token(TOKEN).build()
 
     print("Bot en marcha (PRODUCCIÓN)")
+
+    asyncio.create_task(loop(app))
+
     app.run_polling()
+
 
 if __name__ == "__main__":
     main()
