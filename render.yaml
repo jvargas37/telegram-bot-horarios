@@ -1,5 +1,5 @@
 services:
-  - type: web
+  - type: worker
     name: telegram-bot
     env: python
     runtime: python-3.11.8
