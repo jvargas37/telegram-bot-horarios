@@ -4,6 +4,8 @@ import asyncio
 from datetime import datetime
 import pytz
 import os
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
 
 TOKEN = os.getenv("TOKEN")
 GRUPO_ID = -1003725549983
@@ -36,34 +38,42 @@ async def loop(app):
                         GRUPO_ID,
                         ChatPermissions(can_send_messages=True)
                     )
-                    await app.bot.send_message(GRUPO_ID, "🟢 Obert 08:00-21:00")
+                    await app.bot.send_message(GRUPO_ID, "🟢 Obert 08-21")
 
                 else:
                     await app.bot.set_chat_permissions(
                         GRUPO_ID,
                         ChatPermissions(can_send_messages=False)
                     )
-                    await app.bot.send_message(GRUPO_ID, "🔴 Tancat 08:00-21:00")
+                    await app.bot.send_message(GRUPO_ID, "🔴 Tancat 08-21")
 
         except Exception as e:
-            print("ERROR:", e)
+            print(e)
 
         await asyncio.sleep(60)
 
 
-async def main():
+def web_server():
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"OK")
+
+    server = HTTPServer(("0.0.0.0", 10000), Handler)
+    server.serve_forever()
+
+
+def main():
     app = Application.builder().token(TOKEN).build()
 
-    print("Bot en marcha")
+    threading.Thread(target=web_server, daemon=True).start()
 
-    asyncio.create_task(loop(app))
+    loop_async = asyncio.get_event_loop()
+    loop_async.create_task(loop(app))
 
-    await app.initialize()
-    await app.start()
-
-    # 🔥 ESTO ES CLAVE PARA RENDER WEB SERVICE
-    await asyncio.Event().wait()
+    app.run_polling()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
