@@ -69,7 +69,9 @@ def main():
 
     threading.Thread(target=web_server, daemon=True).start()
 
-    loop_async = asyncio.get_event_loop()
+    loop_async = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop_async)
+
     loop_async.create_task(loop(app))
 
     app.run_polling()
