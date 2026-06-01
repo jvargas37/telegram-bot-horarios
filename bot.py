@@ -65,9 +65,11 @@ def main():
 
     print("Bot en marcha (PRODUCCIÓN)")
 
-    asyncio.create_task(loop(app))
+    async def runner():
+        asyncio.create_task(loop(app))
+        await app.run_polling()
 
-    app.run_polling()
+    asyncio.run(runner())
 
 
 if __name__ == "__main__":
