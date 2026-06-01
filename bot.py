@@ -9,6 +9,7 @@ import threading
 
 TOKEN = os.getenv("TOKEN")
 GRUPO_ID = -1003725549983
+TOPIC_ID = 17
 
 HORA_INICIO = 8
 HORA_FIN = 21
@@ -30,8 +31,9 @@ async def enviar_estado(app, nuevo):
             ChatPermissions(can_send_messages=True)
         )
         await app.bot.send_message(
-            GRUPO_ID,
-            "🟢 El grup està obert\n🕒 Horari: 08:00 a 21:00"
+            chat_id=GRUPO_ID,
+            message_thread_id=TOPIC_ID,
+            text="🟢 El grup està obert\n🕒 Horari: 08:00 a 21:00"
         )
     else:
         await app.bot.set_chat_permissions(
@@ -39,8 +41,9 @@ async def enviar_estado(app, nuevo):
             ChatPermissions(can_send_messages=False)
         )
         await app.bot.send_message(
-            GRUPO_ID,
-            "🔴 El grup està tancat\n🕒 Horari: 08:00 a 21:00"
+            chat_id=GRUPO_ID,
+            message_thread_id=TOPIC_ID,
+            text="🔴 El grup està tancat\n🕒 Horari: 08:00 a 21:00"
         )
 
 
@@ -50,11 +53,9 @@ async def loop(app):
     while True:
         try:
             nuevo = "cerrado" if cerrado() else "abierto"
-
             if nuevo != estado:
                 estado = nuevo
                 await enviar_estado(app, nuevo)
-
         except Exception as e:
             print(e)
 
@@ -77,10 +78,9 @@ async def main_async():
 
     threading.Thread(target=web_server, daemon=True).start()
 
-    estado_inicial = "cerrado" if cerrado() else "abierto"
     global estado
-    estado = estado_inicial
-    await enviar_estado(app, estado_inicial)
+    estado = "cerrado" if cerrado() else "abierto"
+    await enviar_estado(app, estado)
 
     asyncio.create_task(loop(app))
 
