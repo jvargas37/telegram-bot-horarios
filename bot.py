@@ -4,6 +4,8 @@ import asyncio
 from datetime import datetime
 import pytz
 import os
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
 
 TOKEN = os.getenv("TOKEN")
 GRUPO_ID = -1003725549983
@@ -51,30 +53,31 @@ async def loop(app):
         await asyncio.sleep(60)
 
 
+# 🔥 SERVIDOR WEB REAL PARA RENDER
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot OK")
+
+
+def start_server():
+    server = HTTPServer(("0.0.0.0", 10000), Handler)
+    server.serve_forever()
+
+
 def main():
     app = Application.builder().token(TOKEN).build()
 
     print("Bot en marcha")
 
-    async def runner():
-        asyncio.create_task(loop(app))
-        await app.initialize()
-        await app.start()
-        await app.updater.start_polling()
+    # servidor web en hilo separado
+    threading.Thread(target=start_server, daemon=True).start()
 
-        # 🔥 ESTO ES LO IMPORTANTE PARA RENDER WEB SERVICE
-        from http.server import BaseHTTPRequestHandler, HTTPServer
+    # loop del bot
+    asyncio.get_event_loop().create_task(loop(app))
 
-        class Handler(BaseHTTPRequestHandler):
-            def do_GET(self):
-                self.send_response(200)
-                self.end_headers()
-                self.wfile.write(b"OK")
-
-        server = HTTPServer(("0.0.0.0", 10000), Handler)
-        server.serve_forever()
-
-    asyncio.run(runner())
+    app.run_polling()
 
 
 if __name__ == "__main__":
