@@ -65,15 +65,10 @@ def main():
 
     print("Bot en marcha (PRODUCCIÓN)")
 
-    # IMPORTANTE: arrancar loop SIN tocar run_polling internamente
-    async def runner():
-        asyncio.create_task(loop(app))
-        await app.initialize()
-        await app.start()
-        await app.updater.start_polling()
-        await asyncio.Event().wait()  # mantener vivo
+    loop = asyncio.get_event_loop()
+    loop.create_task(loop(app))
 
-    asyncio.run(runner())
+    app.run_polling()
 
 
 if __name__ == "__main__":
