@@ -42,6 +42,7 @@ async def loop(app):
                         GRUPO_ID,
                         "🟢 El grup està obert\n🕒 Horari: 08:00 a 21:00"
                     )
+
                 else:
                     await app.bot.set_chat_permissions(
                         GRUPO_ID,
@@ -64,11 +65,15 @@ def main():
 
     print("Bot en marcha (PRODUCCIÓN)")
 
-    async def start_loop():
+    # IMPORTANTE: arrancar loop SIN tocar run_polling internamente
+    async def runner():
         asyncio.create_task(loop(app))
-        await app.run_polling()
+        await app.initialize()
+        await app.start()
+        await app.updater.start_polling()
+        await asyncio.Event().wait()  # mantener vivo
 
-    asyncio.run(start_loop())
+    asyncio.run(runner())
 
 
 if __name__ == "__main__":
