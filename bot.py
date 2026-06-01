@@ -6,7 +6,6 @@ import pytz
 import os
 
 TOKEN = os.getenv("TOKEN")
-
 GRUPO_ID = -1003725549983
 
 HORA_INICIO = 8
@@ -37,22 +36,14 @@ async def loop(app):
                         GRUPO_ID,
                         ChatPermissions(can_send_messages=True)
                     )
-
-                    await app.bot.send_message(
-                        GRUPO_ID,
-                        "🟢 El grup està obert\n🕒 Horari: 08:00 a 21:00"
-                    )
+                    await app.bot.send_message(GRUPO_ID, "🟢 El grup està obert\n🕒 08:00-21:00")
 
                 else:
                     await app.bot.set_chat_permissions(
                         GRUPO_ID,
                         ChatPermissions(can_send_messages=False)
                     )
-
-                    await app.bot.send_message(
-                        GRUPO_ID,
-                        "🔴 El grup està tancat\n🕒 Horari: 08:00 a 21:00"
-                    )
+                    await app.bot.send_message(GRUPO_ID, "🔴 El grup està tancat\n🕒 08:00-21:00")
 
         except Exception as e:
             print("ERROR:", e)
@@ -63,12 +54,27 @@ async def loop(app):
 def main():
     app = Application.builder().token(TOKEN).build()
 
-    print("Bot en marcha (PRODUCCIÓN)")
+    print("Bot en marcha")
 
-    loop = asyncio.get_event_loop()
-    loop.create_task(loop(app))
+    async def runner():
+        asyncio.create_task(loop(app))
+        await app.initialize()
+        await app.start()
+        await app.updater.start_polling()
 
-    app.run_polling()
+        # 🔥 ESTO ES LO IMPORTANTE PARA RENDER WEB SERVICE
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b"OK")
+
+        server = HTTPServer(("0.0.0.0", 10000), Handler)
+        server.serve_forever()
+
+    asyncio.run(runner())
 
 
 if __name__ == "__main__":
