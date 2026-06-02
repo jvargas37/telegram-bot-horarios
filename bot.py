@@ -33,7 +33,10 @@ async def enviar_estado(app, nuevo):
             ChatPermissions(can_send_messages=True)
         )
 
-        await app.bot.send_message(GRUPO_ID, text=texto)
+        await app.bot.send_message(
+            chat_id=GRUPO_ID,
+            text=texto
+        )
 
         await app.bot.send_message(
             chat_id=GRUPO_ID,
@@ -49,7 +52,10 @@ async def enviar_estado(app, nuevo):
             ChatPermissions(can_send_messages=False)
         )
 
-        await app.bot.send_message(GRUPO_ID, text=texto)
+        await app.bot.send_message(
+            chat_id=GRUPO_ID,
+            text=texto
+        )
 
         await app.bot.send_message(
             chat_id=GRUPO_ID,
@@ -64,9 +70,11 @@ async def loop(app):
     while True:
         try:
             nuevo = "cerrado" if cerrado() else "abierto"
+
             if nuevo != estado:
                 estado = nuevo
                 await enviar_estado(app, nuevo)
+
         except Exception as e:
             print(e)
 
@@ -80,6 +88,10 @@ def web_server():
             self.end_headers()
             self.wfile.write(b"OK")
 
+        def do_HEAD(self):
+            self.send_response(200)
+            self.end_headers()
+
     server = HTTPServer(("0.0.0.0", 10000), Handler)
     server.serve_forever()
 
@@ -91,12 +103,13 @@ async def main_async():
 
     global estado
     estado = "cerrado" if cerrado() else "abierto"
-    await enviar_estado(app, estado)
-
-    asyncio.create_task(loop(app))
 
     await app.initialize()
     await app.start()
+
+    await enviar_estado(app, estado)
+
+    asyncio.create_task(loop(app))
 
     await asyncio.Event().wait()
 
