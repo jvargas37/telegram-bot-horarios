@@ -40,15 +40,18 @@ async def enviar_estado(app, nuevo):
     await app.bot.send_message(chat_id=GRUPO_ID, message_thread_id=TOPIC_ID, text=texto)
 
 
-async def check_estado(context: ContextTypes.DEFAULT_TYPE):
+async def check(app):
     global estado
 
-    nuevo = "cerrado" if cerrado() else "abierto"
+    while True:
+        nuevo = "cerrado" if cerrado() else "abierto"
 
-    print("CHECK:", datetime.now(tz), estado, "->", nuevo)
+        print("CHECK:", datetime.now(tz), estado, "->", nuevo)
 
-    if nuevo != estado:
-        await enviar_estado(context.application, nuevo)
+        if nuevo != estado:
+            await enviar_estado(app, nuevo)
+
+        await asyncio.sleep(60)
 
 
 def web_server():
@@ -57,10 +60,6 @@ def web_server():
             self.send_response(200)
             self.end_headers()
             self.wfile.write(b"OK")
-
-        def do_HEAD(self):
-            self.send_response(200)
-            self.end_headers()
 
     HTTPServer(("0.0.0.0", 10000), Handler).serve_forever()
 
@@ -71,7 +70,8 @@ async def post_init(app):
     estado = "cerrado" if cerrado() else "abierto"
     await enviar_estado(app, estado)
 
-    app.job_queue.run_repeating(check_estado, interval=60, first=10)
+    import asyncio
+    asyncio.create_task(check(app))
 
 
 def main():
@@ -79,7 +79,11 @@ def main():
 
     threading.Thread(target=web_server, daemon=True).start()
 
-    app.run_polling()
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=10000,
+        url_path=TOKEN
+    )
 
 
 if __name__ == "__main__":
