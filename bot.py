@@ -26,9 +26,14 @@ def cerrado():
 
 async def enviar_estado(app, nuevo):
 
-    texto = "🟢 El grup està obert\n🕒 Horari: 08:00 a 21:00" if nuevo == "abierto" else "🔴 El grup està tancat\n🕒 Horari: 08:00 a 21:00"
+    print("ENVIANDO ESTADO:", nuevo, datetime.now(tz))
 
-    permisos = ChatPermissions(can_send_messages=(nuevo == "abierto"))
+    if nuevo == "abierto":
+        texto = "🟢 El grup està obert\n🕒 Horari: 08:00 a 21:00"
+        permisos = ChatPermissions(can_send_messages=True)
+    else:
+        texto = "🔴 El grup està tancat\n🕒 Horari: 08:00 a 21:00"
+        permisos = ChatPermissions(can_send_messages=False)
 
     await app.bot.set_chat_permissions(GRUPO_ID, permisos)
 
@@ -56,7 +61,10 @@ async def loop(app):
     while True:
         nuevo = "cerrado" if cerrado() else "abierto"
 
+        print("CHECK:", datetime.now(tz), "estado:", estado, "nuevo:", nuevo)
+
         if nuevo != estado:
+            print("CAMBIO:", estado, "->", nuevo)
             estado = nuevo
             await enviar_estado(app, nuevo)
 
@@ -73,12 +81,10 @@ async def main():
 
     global estado
     estado = "cerrado" if cerrado() else "abierto"
+
     await enviar_estado(app, estado)
 
-    async def runner():
-        await loop(app)
-
-    asyncio.create_task(runner())
+    asyncio.create_task(loop(app))
 
     await asyncio.Event().wait()
 
