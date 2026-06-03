@@ -1,12 +1,10 @@
 from telegram import ChatPermissions
-from telegram.ext import Application
+from telegram.ext import Application, ContextTypes
 from datetime import datetime
 import pytz
 import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
-import time
-import asyncio
 
 TOKEN = os.getenv("TOKEN")
 GRUPO_ID = -1003725549983
@@ -27,7 +25,8 @@ def cerrado():
 
 async def enviar_estado(app, nuevo):
 
-    print("CAMBIO:", estado, "->", nuevo, datetime.now(tz))
+    global estado
+    estado = nuevo
 
     if nuevo == "abierto":
         texto = "🟢 El grup està obert\n🕒 Horari: 08:00 a 21:00"
@@ -39,6 +38,17 @@ async def enviar_estado(app, nuevo):
     await app.bot.set_chat_permissions(GRUPO_ID, permisos)
     await app.bot.send_message(chat_id=GRUPO_ID, text=texto)
     await app.bot.send_message(chat_id=GRUPO_ID, message_thread_id=TOPIC_ID, text=texto)
+
+
+async def check_estado(context: ContextTypes.DEFAULT_TYPE):
+    global estado
+
+    nuevo = "cerrado" if cerrado() else "abierto"
+
+    print("CHECK:", datetime.now(tz), estado, "->", nuevo)
+
+    if nuevo != estado:
+        await enviar_estado(context.application, nuevo)
 
 
 def web_server():
@@ -55,38 +65,22 @@ def web_server():
     HTTPServer(("0.0.0.0", 10000), Handler).serve_forever()
 
 
-async def loop(app):
+async def post_init(app):
     global estado
-
-    while True:
-        nuevo = "cerrado" if cerrado() else "abierto"
-
-        print("CHECK:", datetime.now(tz), estado, "->", nuevo)
-
-        if nuevo != estado:
-            estado = nuevo
-            await enviar_estado(app, nuevo)
-
-        await asyncio.sleep(60)
-
-
-async def main():
-    global estado
-
-    app = Application.builder().token(TOKEN).build()
-
-    threading.Thread(target=web_server, daemon=True).start()
-
-    await app.initialize()
-    await app.start()
 
     estado = "cerrado" if cerrado() else "abierto"
     await enviar_estado(app, estado)
 
-    asyncio.create_task(loop(app))
+    app.job_queue.run_repeating(check_estado, interval=60, first=10)
 
-    await asyncio.Event().wait()
+
+def main():
+    app = Application.builder().token(TOKEN).post_init(post_init).build()
+
+    threading.Thread(target=web_server, daemon=True).start()
+
+    app.run_polling()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
