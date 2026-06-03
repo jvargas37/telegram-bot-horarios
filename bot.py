@@ -1,11 +1,9 @@
-from http.server import BaseHTTPRequestHandler, HTTPServer
-import threading
-import asyncio
-import os
 from telegram import ChatPermissions
 from telegram.ext import Application
 from datetime import datetime
 import pytz
+import os
+import asyncio
 
 TOKEN = os.getenv("TOKEN")
 GRUPO_ID = -1003725549983
@@ -24,30 +22,15 @@ def cerrado():
     return hora < HORA_INICIO or hora >= HORA_FIN
 
 
-# 🔥 HTTP SERVER (OBLIGATORIO Y SIMPLE)
-def web_server():
-    class Handler(BaseHTTPRequestHandler):
-        def do_GET(self):
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(b"OK")
-
-        def do_HEAD(self):
-            self.send_response(200)
-            self.end_headers()
-
-    HTTPServer(("0.0.0.0", 10000), Handler).serve_forever()
-
-
 async def enviar_estado(app, nuevo):
     global estado
     estado = nuevo
 
     if nuevo == "abierto":
-        texto = "🟢 El grup està obert\n🕒 Horari: 20:00 a 21:00"
+        texto = "🟢 Grupo abierto\n🕒 20:00 - 21:00"
         permisos = ChatPermissions(can_send_messages=True)
     else:
-        texto = "🔴 El grup està tancat\n🕒 Horari: 20:00 a 21:00"
+        texto = "🔴 Grupo cerrado\n🕒 20:00 - 21:00"
         permisos = ChatPermissions(can_send_messages=False)
 
     await app.bot.set_chat_permissions(GRUPO_ID, permisos)
@@ -70,9 +53,6 @@ async def loop(app):
 
 
 async def main():
-    # 🔥 ARRANQUE INMEDIATO DEL PUERTO (SIN ESPERAS)
-    threading.Thread(target=web_server, daemon=True).start()
-
     app = Application.builder().token(TOKEN).build()
 
     await app.initialize()
