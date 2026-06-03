@@ -3,8 +3,6 @@ from telegram.ext import Application, ContextTypes
 from datetime import datetime
 import pytz
 import os
-from http.server import BaseHTTPRequestHandler, HTTPServer
-import threading
 import asyncio
 
 TOKEN = os.getenv("TOKEN")
@@ -54,36 +52,20 @@ async def loop(app):
         await asyncio.sleep(60)
 
 
-def web_server():
-    class Handler(BaseHTTPRequestHandler):
-        def do_GET(self):
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(b"OK")
-
-        def do_HEAD(self):
-            self.send_response(200)
-            self.end_headers()
-
-    HTTPServer(("0.0.0.0", 10000), Handler).serve_forever()
-
-
-async def main_async():
-    app = Application.builder().token(TOKEN).build()
-
-    threading.Thread(target=web_server, daemon=True).start()
-
-    await app.initialize()
-    await app.start()
-
+async def post_init(app):
     global estado
+
     estado = "cerrado" if cerrado() else "abierto"
     await enviar_estado(app, estado)
 
     asyncio.create_task(loop(app))
 
-    await asyncio.Event().wait()
+
+def main():
+    app = Application.builder().token(TOKEN).post_init(post_init).build()
+
+    app.run_polling()
 
 
 if __name__ == "__main__":
-    asyncio.run(main_async())
+    main()
