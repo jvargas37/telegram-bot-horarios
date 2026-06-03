@@ -25,7 +25,6 @@ def cerrado():
 
 
 async def enviar_estado(app, nuevo):
-
     global estado
     estado = nuevo
 
@@ -69,22 +68,22 @@ def web_server():
     HTTPServer(("0.0.0.0", 10000), Handler).serve_forever()
 
 
-async def post_init(app):
-    global estado
+async def main_async():
+    app = Application.builder().token(TOKEN).build()
 
+    threading.Thread(target=web_server, daemon=True).start()
+
+    await app.initialize()
+    await app.start()
+
+    global estado
     estado = "cerrado" if cerrado() else "abierto"
     await enviar_estado(app, estado)
 
     asyncio.create_task(loop(app))
 
-
-def main():
-    app = Application.builder().token(TOKEN).post_init(post_init).build()
-
-    threading.Thread(target=web_server, daemon=True).start()
-
-    app.run_polling()
+    await asyncio.Event().wait()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main_async())
