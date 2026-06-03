@@ -11,8 +11,8 @@ TOKEN = os.getenv("TOKEN")
 GRUPO_ID = -1003725549983
 TOPIC_ID = 17
 
-HORA_INICIO = 12
-HORA_FIN = 13
+HORA_INICIO = 13
+HORA_FIN = 14
 
 tz = pytz.timezone("Europe/Madrid")
 
@@ -25,63 +25,15 @@ def cerrado():
 
 
 async def enviar_estado(app, nuevo):
-    if nuevo == "abierto":
-        texto = "🟢 El grup està obert\n🕒 Horari: 08:00 a 21:00"
 
-        await app.bot.set_chat_permissions(
-            GRUPO_ID,
-            ChatPermissions(can_send_messages=True)
-        )
+    texto = "🟢 El grup està obert\n🕒 Horari: 08:00 a 21:00" if nuevo == "abierto" else "🔴 El grup està tancat\n🕒 Horari: 08:00 a 21:00"
 
-        await app.bot.send_message(
-            chat_id=GRUPO_ID,
-            text=texto
-        )
+    permisos = ChatPermissions(can_send_messages=(nuevo == "abierto"))
 
-        await app.bot.send_message(
-            chat_id=GRUPO_ID,
-            message_thread_id=TOPIC_ID,
-            text=texto
-        )
+    await app.bot.set_chat_permissions(GRUPO_ID, permisos)
 
-    else:
-        texto = "🔴 El grup està tancat\n🕒 Horari: 08:00 a 21:00"
-
-        await app.bot.set_chat_permissions(
-            GRUPO_ID,
-            ChatPermissions(can_send_messages=False)
-        )
-
-        await app.bot.send_message(
-            chat_id=GRUPO_ID,
-            text=texto
-        )
-
-        await app.bot.send_message(
-            chat_id=GRUPO_ID,
-            message_thread_id=TOPIC_ID,
-            text=texto
-        )
-
-
-async def loop(app):
-    global estado
-
-    while True:
-        try:
-            print("LOOP:", datetime.now(tz))
-
-            nuevo = "cerrado" if cerrado() else "abierto"
-
-            if nuevo != estado:
-                print("CAMBIO:", estado, "->", nuevo)
-                estado = nuevo
-                await enviar_estado(app, nuevo)
-
-        except Exception as e:
-            print("ERROR:", e)
-
-        await asyncio.sleep(60)
+    await app.bot.send_message(chat_id=GRUPO_ID, text=texto)
+    await app.bot.send_message(chat_id=GRUPO_ID, message_thread_id=TOPIC_ID, text=texto)
 
 
 def web_server():
@@ -95,27 +47,41 @@ def web_server():
             self.send_response(200)
             self.end_headers()
 
-    server = HTTPServer(("0.0.0.0", 10000), Handler)
-    server.serve_forever()
+    HTTPServer(("0.0.0.0", 10000), Handler).serve_forever()
 
 
-async def main_async():
+async def loop(app):
+    global estado
+
+    while True:
+        nuevo = "cerrado" if cerrado() else "abierto"
+
+        if nuevo != estado:
+            estado = nuevo
+            await enviar_estado(app, nuevo)
+
+        await asyncio.sleep(60)
+
+
+async def main():
     app = Application.builder().token(TOKEN).build()
 
     threading.Thread(target=web_server, daemon=True).start()
 
-    global estado
-    estado = "cerrado" if cerrado() else "abierto"
-
     await app.initialize()
     await app.start()
 
+    global estado
+    estado = "cerrado" if cerrado() else "abierto"
     await enviar_estado(app, estado)
 
-    asyncio.create_task(loop(app))
+    async def runner():
+        await loop(app)
+
+    asyncio.create_task(runner())
 
     await asyncio.Event().wait()
 
 
 if __name__ == "__main__":
-    asyncio.run(main_async())
+    asyncio.run(main())
