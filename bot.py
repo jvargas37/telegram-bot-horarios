@@ -1,7 +1,7 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
-import os
 import asyncio
+import os
 from telegram import ChatPermissions
 from telegram.ext import Application
 from datetime import datetime
@@ -24,7 +24,6 @@ def cerrado():
     return hora < HORA_INICIO or hora >= HORA_FIN
 
 
-# 🔥 IMPORTANTE: PORT ARRANCA INMEDIATO (NO THREAD)
 def web_server():
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
@@ -36,8 +35,7 @@ def web_server():
             self.send_response(200)
             self.end_headers()
 
-    server = HTTPServer(("0.0.0.0", 10000), Handler)
-    server.serve_forever()
+    HTTPServer(("0.0.0.0", 10000), Handler).serve_forever()
 
 
 async def enviar_estado(app, nuevo):
@@ -69,10 +67,9 @@ async def loop(app):
 
 
 async def main():
-    # 🔥 1. PRIMERO HTTP (SIN THREAD)
-    web_server()
+    # 🔥 HTTP en thread (NO bloquea deploy)
+    threading.Thread(target=web_server, daemon=True).start()
 
-    # 🔥 2. BOT DESPUÉS
     app = Application.builder().token(TOKEN).build()
 
     await app.initialize()
