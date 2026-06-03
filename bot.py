@@ -69,14 +69,17 @@ async def loop(app):
 
     while True:
         try:
+            print("LOOP:", datetime.now(tz))
+
             nuevo = "cerrado" if cerrado() else "abierto"
 
             if nuevo != estado:
+                print("CAMBIO:", estado, "->", nuevo)
                 estado = nuevo
                 await enviar_estado(app, nuevo)
 
         except Exception as e:
-            print(e)
+            print("ERROR:", e)
 
         await asyncio.sleep(60)
 
@@ -110,6 +113,12 @@ async def main_async():
     await enviar_estado(app, estado)
 
     asyncio.create_task(loop(app))
+
+    await asyncio.Event().wait()
+
+
+if __name__ == "__main__":
+    asyncio.run(main_async())
 
     await asyncio.Event().wait()
 
