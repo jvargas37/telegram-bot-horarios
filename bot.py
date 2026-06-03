@@ -1,11 +1,11 @@
 from telegram import ChatPermissions
 from telegram.ext import Application
-import asyncio
 from datetime import datetime
 import pytz
 import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
+import time
 
 TOKEN = os.getenv("TOKEN")
 GRUPO_ID = -1003725549983
@@ -24,9 +24,9 @@ def cerrado():
     return hora < HORA_INICIO or hora >= HORA_FIN
 
 
-async def enviar_estado(app, nuevo):
+def enviar_estado(app, nuevo):
 
-    print("ENVIANDO ESTADO:", nuevo, datetime.now(tz))
+    print("CAMBIO:", estado, "->", nuevo, datetime.now(tz))
 
     if nuevo == "abierto":
         texto = "🟢 El grup està obert\n🕒 Horari: 08:00 a 21:00"
@@ -35,10 +35,9 @@ async def enviar_estado(app, nuevo):
         texto = "🔴 El grup està tancat\n🕒 Horari: 08:00 a 21:00"
         permisos = ChatPermissions(can_send_messages=False)
 
-    await app.bot.set_chat_permissions(GRUPO_ID, permisos)
-
-    await app.bot.send_message(chat_id=GRUPO_ID, text=texto)
-    await app.bot.send_message(chat_id=GRUPO_ID, message_thread_id=TOPIC_ID, text=texto)
+    app.bot.set_chat_permissions(GRUPO_ID, permisos)
+    app.bot.send_message(chat_id=GRUPO_ID, text=texto)
+    app.bot.send_message(chat_id=GRUPO_ID, message_thread_id=TOPIC_ID, text=texto)
 
 
 def web_server():
@@ -55,39 +54,33 @@ def web_server():
     HTTPServer(("0.0.0.0", 10000), Handler).serve_forever()
 
 
-async def loop(app):
+def loop(app):
     global estado
 
     while True:
         nuevo = "cerrado" if cerrado() else "abierto"
 
-        print("CHECK:", datetime.now(tz), "estado:", estado, "nuevo:", nuevo)
+        print("CHECK:", datetime.now(tz), estado, "->", nuevo)
 
         if nuevo != estado:
-            print("CAMBIO:", estado, "->", nuevo)
             estado = nuevo
-            await enviar_estado(app, nuevo)
+            enviar_estado(app, nuevo)
 
-        await asyncio.sleep(60)
+        time.sleep(60)
 
 
-async def main():
+def main():
+    global estado
+
     app = Application.builder().token(TOKEN).build()
 
     threading.Thread(target=web_server, daemon=True).start()
 
-    await app.initialize()
-    await app.start()
-
-    global estado
     estado = "cerrado" if cerrado() else "abierto"
+    enviar_estado(app, estado)
 
-    await enviar_estado(app, estado)
-
-    asyncio.create_task(loop(app))
-
-    await asyncio.Event().wait()
+    loop(app)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
