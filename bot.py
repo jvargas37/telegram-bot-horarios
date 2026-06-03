@@ -1,5 +1,5 @@
 from telegram import ChatPermissions
-from telegram.ext import Application, ContextTypes
+from telegram.ext import Application
 from datetime import datetime
 import pytz
 import os
@@ -44,28 +44,26 @@ async def loop(app):
     while True:
         nuevo = "cerrado" if cerrado() else "abierto"
 
-        print("CHECK:", datetime.now(tz), estado, "->", nuevo)
-
         if nuevo != estado:
             await enviar_estado(app, nuevo)
 
         await asyncio.sleep(60)
 
 
-async def post_init(app):
-    global estado
+async def main():
+    app = Application.builder().token(TOKEN).build()
 
+    await app.initialize()
+    await app.start()
+
+    global estado
     estado = "cerrado" if cerrado() else "abierto"
     await enviar_estado(app, estado)
 
     asyncio.create_task(loop(app))
 
-
-def main():
-    app = Application.builder().token(TOKEN).post_init(post_init).build()
-
-    app.run_polling()
+    await asyncio.Event().wait()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
