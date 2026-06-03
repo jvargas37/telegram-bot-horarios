@@ -6,6 +6,7 @@ import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
 import time
+import asyncio
 
 TOKEN = os.getenv("TOKEN")
 GRUPO_ID = -1003725549983
@@ -24,7 +25,7 @@ def cerrado():
     return hora < HORA_INICIO or hora >= HORA_FIN
 
 
-def enviar_estado(app, nuevo):
+async def enviar_estado(app, nuevo):
 
     print("CAMBIO:", estado, "->", nuevo, datetime.now(tz))
 
@@ -35,9 +36,9 @@ def enviar_estado(app, nuevo):
         texto = "🔴 El grup està tancat\n🕒 Horari: 08:00 a 21:00"
         permisos = ChatPermissions(can_send_messages=False)
 
-    app.bot.set_chat_permissions(GRUPO_ID, permisos)
-    app.bot.send_message(chat_id=GRUPO_ID, text=texto)
-    app.bot.send_message(chat_id=GRUPO_ID, message_thread_id=TOPIC_ID, text=texto)
+    await app.bot.set_chat_permissions(GRUPO_ID, permisos)
+    await app.bot.send_message(chat_id=GRUPO_ID, text=texto)
+    await app.bot.send_message(chat_id=GRUPO_ID, message_thread_id=TOPIC_ID, text=texto)
 
 
 def web_server():
@@ -54,7 +55,7 @@ def web_server():
     HTTPServer(("0.0.0.0", 10000), Handler).serve_forever()
 
 
-def loop(app):
+async def loop(app):
     global estado
 
     while True:
@@ -64,23 +65,28 @@ def loop(app):
 
         if nuevo != estado:
             estado = nuevo
-            enviar_estado(app, nuevo)
+            await enviar_estado(app, nuevo)
 
-        time.sleep(60)
+        await asyncio.sleep(60)
 
 
-def main():
+async def main():
     global estado
 
     app = Application.builder().token(TOKEN).build()
 
     threading.Thread(target=web_server, daemon=True).start()
 
-    estado = "cerrado" if cerrado() else "abierto"
-    enviar_estado(app, estado)
+    await app.initialize()
+    await app.start()
 
-    loop(app)
+    estado = "cerrado" if cerrado() else "abierto"
+    await enviar_estado(app, estado)
+
+    asyncio.create_task(loop(app))
+
+    await asyncio.Event().wait()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
