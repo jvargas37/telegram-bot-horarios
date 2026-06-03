@@ -1,8 +1,9 @@
 from telegram import ChatPermissions
-from telegram.ext import Application, ContextTypes
+from telegram.ext import Application
 from datetime import datetime
 import pytz
 import os
+import asyncio
 
 TOKEN = os.getenv("TOKEN")
 GRUPO_ID = -1003725549983
@@ -26,10 +27,10 @@ async def enviar_estado(app, nuevo):
     estado = nuevo
 
     if nuevo == "abierto":
-        texto = "🟢 El grup està obert\n🕒 Horari: 17:00 a 18:00"
+        texto = "🟢 El grup està obert\n🕒 Horari: 20:00 a 21:00"
         permisos = ChatPermissions(can_send_messages=True)
     else:
-        texto = "🔴 El grup està tancat\n🕒 Horari: 17:00 a 18:00"
+        texto = "🔴 El grup està tancat\n🕒 Horari: 20:00 a 21:00"
         permisos = ChatPermissions(can_send_messages=False)
 
     await app.bot.set_chat_permissions(GRUPO_ID, permisos)
@@ -37,30 +38,34 @@ async def enviar_estado(app, nuevo):
     await app.bot.send_message(chat_id=GRUPO_ID, message_thread_id=TOPIC_ID, text=texto)
 
 
-async def job(context: ContextTypes.DEFAULT_TYPE):
+async def loop(app):
     global estado
 
-    nuevo = "cerrado" if cerrado() else "abierto"
+    while True:
+        nuevo = "cerrado" if cerrado() else "abierto"
 
-    print("CHECK:", datetime.now(tz), estado, "->", nuevo)
+        print("CHECK:", datetime.now(tz), estado, "->", nuevo)
 
-    if nuevo != estado:
-        await enviar_estado(context.application, nuevo)
+        if nuevo != estado:
+            await enviar_estado(app, nuevo)
+
+        await asyncio.sleep(60)
 
 
-async def post_init(app):
+async def main():
+    app = Application.builder().token(TOKEN).build()
+
+    await app.initialize()
+    await app.start()
+
     global estado
-
     estado = "cerrado" if cerrado() else "abierto"
     await enviar_estado(app, estado)
 
-    app.job_queue.run_repeating(job, interval=60, first=5)
+    asyncio.create_task(loop(app))
 
-
-def main():
-    app = Application.builder().token(TOKEN).post_init(post_init).build()
-    app.run_polling()
+    await asyncio.Event().wait()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
