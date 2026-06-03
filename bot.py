@@ -4,13 +4,15 @@ from datetime import datetime
 import pytz
 import os
 import asyncio
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
 
 TOKEN = os.getenv("TOKEN")
 GRUPO_ID = -1003725549983
 TOPIC_ID = 17
 
-HORA_INICIO = 19
-HORA_FIN = 20
+HORA_INICIO = 20
+HORA_FIN = 21
 
 tz = pytz.timezone("Europe/Madrid")
 
@@ -44,14 +46,32 @@ async def loop(app):
     while True:
         nuevo = "cerrado" if cerrado() else "abierto"
 
+        print("CHECK:", datetime.now(tz), estado, "->", nuevo)
+
         if nuevo != estado:
             await enviar_estado(app, nuevo)
 
         await asyncio.sleep(60)
 
 
+def web_server():
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"OK")
+
+        def do_HEAD(self):
+            self.send_response(200)
+            self.end_headers()
+
+    HTTPServer(("0.0.0.0", 10000), Handler).serve_forever()
+
+
 async def main():
     app = Application.builder().token(TOKEN).build()
+
+    threading.Thread(target=web_server, daemon=True).start()
 
     await app.initialize()
     await app.start()
