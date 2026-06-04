@@ -1,9 +1,12 @@
 import os
+import asyncio
 from datetime import datetime
 import pytz
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
 
 from telegram import ChatPermissions
-from telegram.ext import Application, ContextTypes
+from telegram.ext import Application
 
 TOKEN = os.getenv("TOKEN")
 
@@ -23,6 +26,24 @@ def es_cerrado():
     return hora < HORA_INICIO or hora >= HORA_FIN
 
 
+# ---------------- HTTP SERVER (RENDER OBLIGATORIO) ----------------
+def start_http():
+    port = int(os.environ.get("PORT", 10000))
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"OK")
+
+        def do_HEAD(self):
+            self.send_response(200)
+            self.end_headers()
+
+    HTTPServer(("0.0.0.0", port), Handler).serve_forever()
+
+
+# ---------------- TELEGRAM ----------------
 async def enviar_estado(app, nuevo):
     global estado
     estado = nuevo
@@ -45,30 +66,47 @@ async def enviar_estado(app, nuevo):
     )
 
 
-async def check_job(context: ContextTypes.DEFAULT_TYPE):
+# ---------------- LOOP ----------------
+async def loop(app):
     global estado
 
-    nuevo = "cerrado" if es_cerrado() else "abierto"
+    while True:
+        try:
+            nuevo = "cerrado" if es_cerrado() else "abierto"
 
-    print("CHECK:", datetime.now(tz), estado, "->", nuevo)
+            print("CHECK:", datetime.now(tz), estado, "->", nuevo)
 
-    if nuevo != estado:
-        print("CAMBIO:", estado, "->", nuevo)
-        await enviar_estado(context.application, nuevo)
+            if nuevo != estado:
+                print("CAMBIO:", estado, "->", nuevo)
+                await enviar_estado(app, nuevo)
+
+        except Exception as e:
+            print("ERROR LOOP:", e)
+
+        await asyncio.sleep(60)
 
 
-async def post_init(app):
+# ---------------- MAIN ----------------
+async def start_bot():
+    threading.Thread(target=start_http, daemon=True).start()
+
+    app = Application.builder().token(TOKEN).build()
+
+    await app.initialize()
+    await app.start()
+
     global estado
-
     estado = "cerrado" if es_cerrado() else "abierto"
+
     await enviar_estado(app, estado)
 
-    app.job_queue.run_repeating(check_job, interval=60, first=10)
+    asyncio.create_task(loop(app))
+
+    await asyncio.Event().wait()
 
 
 def main():
-    app = Application.builder().token(TOKEN).post_init(post_init).build()
-    app.run_polling()
+    asyncio.run(start_bot())
 
 
 if __name__ == "__main__":
