@@ -62,36 +62,41 @@ async def loop(app):
     global estado
 
     while True:
-        nuevo = "cerrado" if es_cerrado() else "abierto"
+        try:
+            nuevo = "cerrado" if es_cerrado() else "abierto"
 
-        print("CHECK:", datetime.now(tz), estado, "->", nuevo)
+            print("CHECK:", datetime.now(tz), estado, "->", nuevo)
 
-        if nuevo != estado:
-            print("CAMBIO:", estado, "->", nuevo)
-            await enviar_estado(app, nuevo)
+            if nuevo != estado:
+                print("CAMBIO:", estado, "->", nuevo)
+                await enviar_estado(app, nuevo)
+
+        except Exception as e:
+            print("ERROR:", e)
 
         await asyncio.sleep(60)
 
 
-async def main():
+def start_bot():
     threading.Thread(target=start_http, daemon=True).start()
 
     app = Application.builder().token(TOKEN).build()
 
-    await app.initialize()
-    await app.start()
+    async def runner():
+        global estado
 
-    global estado
-    estado = "cerrado" if es_cerrado() else "abierto"
+        await app.initialize()
+        await app.start()
 
-    await enviar_estado(app, estado)
+        estado = "cerrado" if es_cerrado() else "abierto"
+        await enviar_estado(app, estado)
 
-    await loop(app)
+        asyncio.create_task(loop(app))
 
+        await asyncio.Event().wait()
 
-def run():
-    asyncio.run(main())
+    asyncio.run(runner())
 
 
 if __name__ == "__main__":
-    run()
+    start_bot()
