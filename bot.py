@@ -9,8 +9,8 @@ TOKEN = os.getenv("TOKEN")
 GRUPO_ID = -1003725549983
 TOPIC_ID = 17
 
-HORA_INICIO = 8
-HORA_FIN = 21
+HORA_INICIO = 13
+HORA_FIN = 14
 
 tz = pytz.timezone("Europe/Madrid")
 
