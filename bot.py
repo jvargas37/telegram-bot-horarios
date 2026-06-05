@@ -1,10 +1,10 @@
 import os
 import time
-import requests
+import threading
 from datetime import datetime
 import pytz
 from http.server import BaseHTTPRequestHandler, HTTPServer
-import threading
+import requests
 
 TOKEN = os.getenv("TOKEN")
 
@@ -24,9 +24,9 @@ def es_cerrado():
     return hora < HORA_INICIO or hora >= HORA_FIN
 
 
-def tg(method, data):
+def telegram(method, payload):
     url = f"https://api.telegram.org/bot{TOKEN}/{method}"
-    requests.post(url, data=data)
+    requests.post(url, data=payload)
 
 
 def enviar_estado(nuevo):
@@ -44,17 +44,17 @@ def enviar_estado(nuevo):
         texto = "🔴 Grupo CERRADO\n🕒 08:00 - 21:00"
         permisos = {"can_send_messages": False}
 
-    tg("setChatPermissions", {
+    telegram("setChatPermissions", {
         "chat_id": GRUPO_ID,
         "permissions": str(permisos)
     })
 
-    tg("sendMessage", {
+    telegram("sendMessage", {
         "chat_id": GRUPO_ID,
         "text": texto
     })
 
-    tg("sendMessage", {
+    telegram("sendMessage", {
         "chat_id": GRUPO_ID,
         "message_thread_id": TOPIC_ID,
         "text": texto
