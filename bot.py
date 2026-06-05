@@ -1,11 +1,10 @@
 import os
 import time
-import threading
+import requests
 from datetime import datetime
 import pytz
 from http.server import BaseHTTPRequestHandler, HTTPServer
-
-from telegram import Bot, ChatPermissions
+import threading
 
 TOKEN = os.getenv("TOKEN")
 
@@ -17,13 +16,17 @@ HORA_FIN = 21
 
 tz = pytz.timezone("Europe/Madrid")
 
-bot = Bot(token=TOKEN)
 estado = None
 
 
 def es_cerrado():
     hora = datetime.now(tz).hour
     return hora < HORA_INICIO or hora >= HORA_FIN
+
+
+def tg(method, data):
+    url = f"https://api.telegram.org/bot{TOKEN}/{method}"
+    requests.post(url, data=data)
 
 
 def enviar_estado(nuevo):
@@ -36,14 +39,26 @@ def enviar_estado(nuevo):
 
     if nuevo == "abierto":
         texto = "🟢 Grupo ABIERTO\n🕒 08:00 - 21:00"
-        permisos = ChatPermissions(can_send_messages=True)
+        permisos = {"can_send_messages": True}
     else:
         texto = "🔴 Grupo CERRADO\n🕒 08:00 - 21:00"
-        permisos = ChatPermissions(can_send_messages=False)
+        permisos = {"can_send_messages": False}
 
-    bot.set_chat_permissions(GRUPO_ID, permisos)
-    bot.send_message(chat_id=GRUPO_ID, text=texto)
-    bot.send_message(chat_id=GRUPO_ID, message_thread_id=TOPIC_ID, text=texto)
+    tg("setChatPermissions", {
+        "chat_id": GRUPO_ID,
+        "permissions": str(permisos)
+    })
+
+    tg("sendMessage", {
+        "chat_id": GRUPO_ID,
+        "text": texto
+    })
+
+    tg("sendMessage", {
+        "chat_id": GRUPO_ID,
+        "message_thread_id": TOPIC_ID,
+        "text": texto
+    })
 
 
 def loop():
