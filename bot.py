@@ -1,5 +1,4 @@
 import os
-import asyncio
 from datetime import datetime
 import pytz
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -19,6 +18,7 @@ HORA_FIN = 21
 tz = pytz.timezone("Europe/Madrid")
 
 estado = None
+app = None
 
 
 def es_cerrado():
@@ -26,24 +26,12 @@ def es_cerrado():
     return hora < HORA_INICIO or hora >= HORA_FIN
 
 
-def start_http():
-    port = int(os.environ.get("PORT", 10000))
-
-    class Handler(BaseHTTPRequestHandler):
-        def do_GET(self):
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(b"OK")
-
-        def do_HEAD(self):
-            self.send_response(200)
-            self.end_headers()
-
-    HTTPServer(("0.0.0.0", port), Handler).serve_forever()
-
-
-async def enviar_estado(app, nuevo):
+async def enviar_estado(nuevo):
     global estado
+
+    if nuevo == estado:
+        return
+
     estado = nuevo
 
     if nuevo == "abierto":
@@ -58,45 +46,44 @@ async def enviar_estado(app, nuevo):
     await app.bot.send_message(chat_id=GRUPO_ID, message_thread_id=TOPIC_ID, text=texto)
 
 
-async def loop(app):
-    global estado
+def start_http():
+    port = int(os.environ.get("PORT", 10000))
 
-    while True:
-        try:
-            nuevo = "cerrado" if es_cerrado() else "abierto"
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            try:
+                import asyncio
+                asyncio.run(enviar_estado("cerrado" if es_cerrado() else "abierto"))
+            except Exception as e:
+                print("ERROR HTTP CHECK:", e)
 
-            print("CHECK:", datetime.now(tz), estado, "->", nuevo)
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"OK")
 
-            if nuevo != estado:
-                print("CAMBIO:", estado, "->", nuevo)
-                await enviar_estado(app, nuevo)
-
-        except Exception as e:
-            print("ERROR:", e)
-
-        await asyncio.sleep(60)
+    HTTPServer(("0.0.0.0", port), Handler).serve_forever()
 
 
-def start_bot():
-    threading.Thread(target=start_http, daemon=True).start()
+async def start_bot():
+    global app
 
     app = Application.builder().token(TOKEN).build()
 
-    async def runner():
-        global estado
+    await app.initialize()
+    await app.start()
 
-        await app.initialize()
-        await app.start()
+    estado_inicial = "cerrado" if es_cerrado() else "abierto"
+    await enviar_estado(estado_inicial)
 
-        estado = "cerrado" if es_cerrado() else "abierto"
-        await enviar_estado(app, estado)
+    await asyncio.Event().wait()
 
-        asyncio.create_task(loop(app))
 
-        await asyncio.Event().wait()
+def main():
+    import asyncio
 
-    asyncio.run(runner())
+    threading.Thread(target=start_http, daemon=True).start()
+    asyncio.run(start_bot())
 
 
 if __name__ == "__main__":
-    start_bot()
+    main()
