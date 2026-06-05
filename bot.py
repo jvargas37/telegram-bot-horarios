@@ -5,6 +5,7 @@ import requests
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 TOKEN = os.getenv("TOKEN")
+
 GRUPO_ID = -1003725549983
 TOPIC_ID = 17
 
