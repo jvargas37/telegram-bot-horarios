@@ -1,4 +1,5 @@
 import os
+import sys
 import asyncio
 from datetime import datetime
 import pytz
@@ -7,6 +8,9 @@ import threading
 
 from telegram import ChatPermissions
 from telegram.ext import Application
+
+print("PYTHON:", sys.version)
+print("BOT ARRANCANDO")
 
 TOKEN = os.getenv("TOKEN")
 
@@ -26,7 +30,6 @@ def es_cerrado():
     return hora < HORA_INICIO or hora >= HORA_FIN
 
 
-# ---------------- HTTP SERVER (RENDER OBLIGATORIO) ----------------
 def start_http():
     port = int(os.environ.get("PORT", 10000))
 
@@ -43,7 +46,6 @@ def start_http():
     HTTPServer(("0.0.0.0", port), Handler).serve_forever()
 
 
-# ---------------- TELEGRAM ----------------
 async def enviar_estado(app, nuevo):
     global estado
     estado = nuevo
@@ -56,9 +58,7 @@ async def enviar_estado(app, nuevo):
         permisos = ChatPermissions(can_send_messages=False)
 
     await app.bot.set_chat_permissions(GRUPO_ID, permisos)
-
     await app.bot.send_message(chat_id=GRUPO_ID, text=texto)
-
     await app.bot.send_message(
         chat_id=GRUPO_ID,
         message_thread_id=TOPIC_ID,
@@ -66,14 +66,12 @@ async def enviar_estado(app, nuevo):
     )
 
 
-# ---------------- LOOP ----------------
 async def loop(app):
     global estado
 
     while True:
         try:
             nuevo = "cerrado" if es_cerrado() else "abierto"
-
             print("CHECK:", datetime.now(tz), estado, "->", nuevo)
 
             if nuevo != estado:
@@ -86,7 +84,6 @@ async def loop(app):
         await asyncio.sleep(60)
 
 
-# ---------------- MAIN ----------------
 async def start_bot():
     threading.Thread(target=start_http, daemon=True).start()
 
