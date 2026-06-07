@@ -9,8 +9,8 @@ TOKEN = os.getenv("TOKEN")
 GRUPO_ID = -1003725549983
 TOPIC_ID = 17
 
-HORA_INICIO = 10
-HORA_FIN = 11
+HORA_INICIO = 8
+HORA_FIN = 21
 
 tz = pytz.timezone("Europe/Madrid")
 
@@ -39,7 +39,11 @@ def check():
 
     estado = nuevo
 
-    texto = "🟢 ABIERTO" if nuevo == "abierto" else "🔴 CERRADO"
+    texto = (
+        "🟢 Grupo ABIERTO\n🕒 08:00 - 21:00"
+        if nuevo == "abierto"
+        else "🔴 Grupo CERRADO\n🕒 08:00 - 21:00"
+    )
 
     tg("setChatPermissions", {
         "chat_id": GRUPO_ID,
@@ -73,7 +77,7 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     port = int(os.environ.get("PORT", 10000))
-    HTTPServer(("0.0.0.0", port), Handler).serve_forever()
+    HTTPServer(("0.0.0.0", port)).serve_forever()
 
 
 if __name__ == "__main__":
