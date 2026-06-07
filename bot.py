@@ -35,12 +35,15 @@ def check():
 
     estado = nuevo
 
-    if nuevo == "abierto":
-        texto = "🟢 Grupo ABIERTO\n🕒 08:00 - 21:00"
-        permisos = {"can_send_messages": True}
-    else:
-        texto = "🔴 Grupo CERRADO\n🕒 08:00 - 21:00"
-        permisos = {"can_send_messages": False}
+    abierto = nuevo == "abierto"
+
+    texto = (
+        "🟢 Grupo ABIERTO\n🕒 08:00 - 21:00"
+        if abierto
+        else "🔴 Grupo CERRADO\n🕒 08:00 - 21:00"
+    )
+
+    permisos = {"can_send_messages": abierto}
 
     tg("setChatPermissions", {
         "chat_id": GRUPO_ID,
