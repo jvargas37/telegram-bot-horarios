@@ -22,7 +22,11 @@ def es_cerrado():
 
 
 def tg(method, data):
-    requests.post(f"https://api.telegram.org/bot{TOKEN}/{method}", data=data)
+    requests.post(
+        f"https://api.telegram.org/bot{TOKEN}/{method}",
+        data=data,
+        timeout=30
+    )
 
 
 def check():
@@ -37,9 +41,13 @@ def check():
 
     texto = "🟢 ABIERTO" if nuevo == "abierto" else "🔴 CERRADO"
 
+    permisos = {
+        "can_send_messages": nuevo == "abierto"
+    }
+
     tg("setChatPermissions", {
         "chat_id": GRUPO_ID,
-        "permissions": str({"can_send_messages": nuevo == "abierto"})
+        "permissions": str(permisos).replace("'", '"').lower()
     })
 
     tg("sendMessage", {
@@ -62,6 +70,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(b"OK")
 
     def do_HEAD(self):
+        check()
         self.send_response(200)
         self.end_headers()
 
