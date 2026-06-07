@@ -22,11 +22,7 @@ def es_cerrado():
 
 
 def tg(method, data):
-    requests.post(
-        f"https://api.telegram.org/bot{TOKEN}/{method}",
-        data=data,
-        timeout=20
-    )
+    requests.post(f"https://api.telegram.org/bot{TOKEN}/{method}", data=data)
 
 
 def check():
@@ -39,15 +35,16 @@ def check():
 
     estado = nuevo
 
-    texto = (
-        "🟢 Grupo ABIERTO\n🕒 08:00 - 21:00"
-        if nuevo == "abierto"
-        else "🔴 Grupo CERRADO\n🕒 08:00 - 21:00"
-    )
+    if nuevo == "abierto":
+        texto = "🟢 Grupo ABIERTO\n🕒 08:00 - 21:00"
+        permisos = {"can_send_messages": True}
+    else:
+        texto = "🔴 Grupo CERRADO\n🕒 08:00 - 21:00"
+        permisos = {"can_send_messages": False}
 
     tg("setChatPermissions", {
         "chat_id": GRUPO_ID,
-        "permissions": str({"can_send_messages": nuevo == "abierto"}).replace("'", '"')
+        "permissions": str(permisos).replace("'", '"')
     })
 
     tg("sendMessage", {
