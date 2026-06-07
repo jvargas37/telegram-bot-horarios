@@ -22,22 +22,17 @@ def es_cerrado():
 
 
 def tg(method, data):
-    try:
-        requests.post(
-            f"https://api.telegram.org/bot{TOKEN}/{method}",
-            data=data,
-            timeout=20
-        )
-    except Exception as e:
-        print("ERROR TELEGRAM:", e)
+    requests.post(
+        f"https://api.telegram.org/bot{TOKEN}/{method}",
+        data=data,
+        timeout=20
+    )
 
 
 def check():
     global estado
 
     nuevo = "cerrado" if es_cerrado() else "abierto"
-
-    print("CHECK:", datetime.now(tz), "estado:", estado, "->", nuevo)
 
     if nuevo == estado:
         return
@@ -46,11 +41,9 @@ def check():
 
     texto = "🟢 ABIERTO" if nuevo == "abierto" else "🔴 CERRADO"
 
-    permisos = {"can_send_messages": nuevo == "abierto"}
-
     tg("setChatPermissions", {
         "chat_id": GRUPO_ID,
-        "permissions": str(permisos).replace("'", '"')
+        "permissions": str({"can_send_messages": nuevo == "abierto"}).replace("'", '"')
     })
 
     tg("sendMessage", {
@@ -67,14 +60,12 @@ def check():
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        print("REQUEST GET")
         check()
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"OK")
 
     def do_HEAD(self):
-        print("REQUEST HEAD")
         check()
         self.send_response(200)
         self.end_headers()
@@ -82,7 +73,6 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     port = int(os.environ.get("PORT", 10000))
-    print("SERVER STARTED ON PORT", port)
     HTTPServer(("0.0.0.0", port), Handler).serve_forever()
 
 
