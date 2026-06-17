@@ -1,4 +1,5 @@
 import os
+import json
 from datetime import datetime
 import pytz
 import requests
@@ -22,11 +23,12 @@ def es_cerrado():
 
 
 def tg(method, data):
-    requests.post(
+    r = requests.post(
         f"https://api.telegram.org/bot{TOKEN}/{method}",
         data=data,
         timeout=20
     )
+    print(method, r.text)
 
 
 def check():
@@ -40,14 +42,16 @@ def check():
     estado = nuevo
 
     texto = (
-    "🟢 Grupo ABIERTO\n🕒 08:00 - 21:00"
-    if nuevo == "abierto"
-    else "🔴 Grupo CERRADO\n🕒 08:00 - 21:00"
-)
+        "🟢 Grupo ABIERTO\n🕒 08:00 - 21:00"
+        if nuevo == "abierto"
+        else "🔴 Grupo CERRADO\n🕒 08:00 - 21:00"
+    )
 
     tg("setChatPermissions", {
         "chat_id": GRUPO_ID,
-        "permissions": str({"can_send_messages": nuevo == "abierto"}).replace("'", '"')
+        "permissions": json.dumps({
+            "can_send_messages": nuevo == "abierto"
+        })
     })
 
     tg("sendMessage", {
