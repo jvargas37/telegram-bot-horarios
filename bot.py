@@ -41,28 +41,11 @@ def check():
 
     estado = nuevo
 
-    texto = (
-        "🟢 Grupo ABIERTO\n🕒 08:00 - 21:00"
-        if nuevo == "abierto"
-        else "🔴 Grupo CERRADO\n🕒 08:00 - 21:00"
-    )
-
     tg("setChatPermissions", {
         "chat_id": GRUPO_ID,
         "permissions": json.dumps({
             "can_send_messages": nuevo == "abierto"
         })
-    })
-
-    tg("sendMessage", {
-        "chat_id": GRUPO_ID,
-        "text": texto
-    })
-
-    tg("sendMessage", {
-        "chat_id": GRUPO_ID,
-        "message_thread_id": TOPIC_ID,
-        "text": texto
     })
 
 
