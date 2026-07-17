@@ -23,12 +23,11 @@ def es_cerrado():
 
 
 def tg(method, data):
-    r = requests.post(
+    requests.post(
         f"https://api.telegram.org/bot{TOKEN}/{method}",
         data=data,
         timeout=20
     )
-    print(method, r.text)
 
 
 def check():
